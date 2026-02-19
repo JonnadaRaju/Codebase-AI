@@ -1,0 +1,9 @@
+__pycache_/
+*.pyc
+
+# ChromaDB persistent directory
+chroma_persist_dir/
+
+.env
+
+chroma_db/
