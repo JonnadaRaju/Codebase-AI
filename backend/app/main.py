@@ -1,11 +1,21 @@
 from fastapi import FastAPI
 from app.routers import upload, query, projects
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(
     title="Codebase AI",
     description="AI-Powered Project Intelligence System",
     version="1.0.0"
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
