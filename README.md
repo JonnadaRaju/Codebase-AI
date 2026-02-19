@@ -21,7 +21,6 @@ Instead of copy-pasting code into ChatGPT, Codebase AI **understands your full p
 | Mode | Description |
 |------|-------------|
 | 📘 **Explain Mode** | Get step-by-step explanations of any code logic or flow |
-| 🎓 **Viva Mode** | Simulates examiner-style Q&A with feedback on your answers |
 | 💼 **Interview Mode** | Generates technical interview questions from your project |
 | 🛠 **Review Mode** | Audits code for security issues, bad practices & improvements |
 | 🐛 **Debug Mode** | Traces root causes of bugs with fix suggestions |
