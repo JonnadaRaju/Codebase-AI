@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.routers import upload, query, projects
 from fastapi.middleware.cors import CORSMiddleware
+from app.db.database import init_db
 
 
 app = FastAPI(
@@ -17,6 +18,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup():
+    init_db()
 
 
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
