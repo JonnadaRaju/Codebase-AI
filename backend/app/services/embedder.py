@@ -1,17 +1,13 @@
 from sentence_transformers import SentenceTransformer
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 from typing import List, Dict
 from app.config import settings
+import os
 
 embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
 
-chroma_client = chromadb.Client(
-    ChromaSettings(
-        persist_directory=settings.CHROMA_PERSIST_DIR,
-        anonymized_telemetry=False
-    )
-)
+os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
+chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
 
 
 def get_collection(project_id: str):
