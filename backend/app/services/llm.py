@@ -3,7 +3,7 @@ from app.config import settings
 
 
 FREE_MODELS = [
-    "openrouter/free",   # ← auto-picks any working free model, never 404s
+    "openrouter/free",   
 ]
 
 
