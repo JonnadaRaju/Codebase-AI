@@ -1,14 +1,10 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    # Groq LLM
-    # GROQ_API_KEY: str
-    # GROQ_MODEL: str = "llama-3.1-8b-instant"
     
-    # Gemini LLM
-    GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.0-flash"
-
+    # OpenRouter API Key
+    OPENROUTER_API_KEY: str
+    
     # Embedding Model
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
 
@@ -22,7 +18,7 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 400
     CHUNK_OVERLAP: int = 50
     MAX_FILE_SIZE_KB: int = 500
-    TOP_K_RETRIEVAL: int = 10
+    TOP_K_RETRIEVAL: int = 8
 
     class Config:
         env_file = ".env"
