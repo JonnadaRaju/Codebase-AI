@@ -43,17 +43,30 @@ async def query_project(request: QueryRequest):
     if request.mode == "debug" and request.error_message:
         user_query = f"Error/Issue: {request.error_message}\n\nContext: {request.question}"
 
+    # For architecture mode — focus query on code structure
+    if request.mode == "architecture":
+        user_query = f"source code files routes models database schemas functions classes {request.question}"
+
     try:
-        chunks = retrieve_context(request.project_id, user_query)
+        chunks = retrieve_context(request.project_id, user_query, top_k=10)
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Project not found or retrieval failed: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Project not found: {str(e)}")
+
+    # For architecture mode — filter out README/docs, keep only source code
+    if request.mode == "architecture":
+        code_chunks = [c for c in chunks if not any(
+            c["filename"].lower().endswith(ext)
+            for ext in ['.md', '.txt', '.rst', 'readme', 'specification']
+        )]
+        # Only use filtered chunks if we found code files, otherwise use all
+        if code_chunks:
+            chunks = code_chunks
 
     if not chunks:
-        raise HTTPException(status_code=404, detail="No relevant code found for this query.")
+        raise HTTPException(status_code=404, detail="No relevant code found.")
 
     context = format_context_for_llm(chunks)
     relevant_files = get_relevant_filenames(chunks)
-
     system_prompt = get_system_prompt(request.mode, request.num_questions or 5)
 
     try:
