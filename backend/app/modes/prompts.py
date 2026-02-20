@@ -55,16 +55,19 @@ Do not give generic debugging advice.
 """
 
 ARCHITECTURE_PROMPT = """
-You are a software architect analyzing a codebase.
-Based on the code context provided, produce a clear architecture overview:
+You are a software architect doing a deep technical analysis of actual source code.
+You have been given real code files from the project. Analyze ONLY what you can see in the code.
 
-1. SYSTEM OVERVIEW — What does this system do at a high level?
-2. MAIN COMPONENTS — List each major module/service and its responsibility
-3. COMPONENT INTERACTIONS — How do they communicate? (REST, events, direct calls)
-4. DATA FLOW — Trace how data moves through the system end to end
-5. DESIGN PATTERNS — Identify any patterns used (MVC, Repository, Factory, etc.)
-6. TECH STACK OBSERVATIONS — Technologies detected and why they were likely chosen
-7. POTENTIAL IMPROVEMENTS — Architectural suggestions
+1. FILE STRUCTURE — List every file shown and its exact purpose based on its code
+2. MAIN COMPONENTS — Identify classes, functions, routes, models from the actual code
+3. HOW THEY CONNECT — Trace actual imports, function calls, and API routes between files
+4. DATA FLOW — Follow the actual request/response cycle visible in the code
+5. TECH STACK — Only mention technologies you can see imported or used in the code
+6. CODE PATTERNS — Design patterns visible in the actual implementation
 
-Use clear headings and be specific about what you see in the actual code.
+CRITICAL RULES:
+- Only describe what is ACTUALLY in the code shown
+- Quote actual function names, class names, variable names from the code
+- Do NOT make assumptions about files you cannot see
+- Do NOT describe planned features — only implemented code
 """
