@@ -1,27 +1,23 @@
-# from groq import Groq
-import google.generativeai as genai
+import requests
 from app.config import settings
 
-# roq_client = Groq(api_key=settings.GROQ_API_KEY)
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
-
-
-model = genai.GenerativeModel(
-    model_name=settings.GEMINI_MODEL,
-    generation_config=genai.types.GenerationConfig(
-        temperature=0.2,
-        max_output_tokens=4096,
-    )
-)
+FREE_MODELS = [
+    "openrouter/free",   # ← auto-picks any working free model, never 404s
+]
 
 
 def generate_response(system_prompt: str, context: str, user_query: str) -> dict:
-    full_prompt = f"""{system_prompt}
+    headers = {
+        "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://codebaseai.app",
+        "X-Title": "Codebase AI"
+    }
 
----
-
-Here is the relevant code from the project:
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"""Here is the relevant code from the project:
 
 {context}
 
@@ -29,39 +25,32 @@ Here is the relevant code from the project:
 
 User Question: {user_query}
 
-Provide a detailed, accurate answer based strictly on the actual code shown above.
-Reference specific file names, function names, and line logic from the code."""
+Provide a detailed accurate answer based strictly on the actual code shown above.
+Reference specific file names, function names, and line logic from the code."""}
+    ]
 
-    response = model.generate_content(full_prompt)
+    response = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers=headers,
+        json={
+            "model": "openrouter/free",
+            "messages": messages,
+            "temperature": 0.2,
+            "max_tokens": 2048,
+        },
+        timeout=60
+    )
 
-    # Approximate token count
-    tokens_used = len(full_prompt.split()) + len(response.text.split())
+    data = response.json()
 
-    return {
-        "answer": response.text,
-        "tokens_used": tokens_used
-    }
+    if response.status_code != 200:
+        raise Exception(data.get("error", {}).get("message", "Unknown error"))
 
-# def generate_response(system_prompt: str, context: str, user_query: str) -> dict:
-#     user_message = f"""Here is the relevant code from the project:
-
-# {context}
-
-# ---
-
-# User Question: {user_query}"""
-
-#     response = groq_client.chat.completions.create(
-#         model=settings.GROQ_MODEL,
-#         messages=[
-#             {"role": "system", "content": system_prompt},
-#             {"role": "user", "content": user_message}
-#         ],
-#         temperature=0.3,
-#         max_tokens=1024,
-#     )
-
-#     return {
-#         "answer": response.choices[0].message.content,
-#         "tokens_used": response.usage.total_tokens
-#     }
+    answer = data["choices"][0]["message"]["content"]
+    tokens_used = data.get("usage", {}).get("total_tokens", 0)
+    
+    # Show which model was actually used
+    model_used = data.get("model", "unknown")
+    print(f"✅ Model used: {model_used}")
+    
+    return {"answer": answer, "tokens_used": tokens_used}
