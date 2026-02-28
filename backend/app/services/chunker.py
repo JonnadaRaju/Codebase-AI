@@ -3,23 +3,17 @@ from app.config import settings
 
 
 def chunk_code(content: str, filename: str, language: str) -> List[Dict]:
-
     lines = content.split('\n')
     chunks = []
     chunk_size = settings.CHUNK_SIZE
     overlap = settings.CHUNK_OVERLAP
-
-    step = chunk_size - overlap
-    if step <= 0:
-        step = chunk_size
+    step = max(chunk_size - overlap, 1)
 
     for i in range(0, len(lines), step):
         chunk_lines = lines[i:i + chunk_size]
         chunk_text = '\n'.join(chunk_lines).strip()
-
-        if not chunk_text:
+        if len(chunk_text) < 20:   # ← skip tiny useless chunks
             continue
-
         chunks.append({
             "text": chunk_text,
             "filename": filename,
@@ -27,7 +21,6 @@ def chunk_code(content: str, filename: str, language: str) -> List[Dict]:
             "start_line": i + 1,
             "end_line": i + len(chunk_lines),
         })
-
     return chunks
 
 
