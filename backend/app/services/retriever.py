@@ -8,7 +8,6 @@ def retrieve_context(project_id: str, query: str, top_k: int = None) -> List[Dic
         top_k = settings.TOP_K_RETRIEVAL
 
     collection = get_collection(project_id)
-
     query_embedding = embedding_model.encode([query]).tolist()
 
     results = collection.query(
@@ -29,16 +28,15 @@ def retrieve_context(project_id: str, query: str, top_k: int = None) -> List[Dic
             "language": meta.get("language", ""),
             "start_line": meta.get("start_line", 0),
             "end_line": meta.get("end_line", 0),
-            "relevance_score": round(1 - dist, 4)  # cosine similarity
+            "relevance_score": round(1 - dist, 4)
         })
 
     return chunks
 
 
 def format_context_for_llm(chunks: List[Dict]) -> str:
-
     formatted = []
-    for i, chunk in enumerate(chunks, 1):
+    for chunk in chunks:
         formatted.append(
             f"--- File: {chunk['filename']} (Lines {chunk['start_line']}-{chunk['end_line']}) ---\n"
             f"{chunk['text']}"
