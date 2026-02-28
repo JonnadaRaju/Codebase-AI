@@ -39,14 +39,41 @@ def get_project(project_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.delete("/projects/{project_id}")
+@router.get("/projects/{project_id}/files")
+def get_project_files(project_id: str, db: Session = Depends(get_db)):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    # Get unique filenames from ChromaDB vectors
+    from app.services.embedder import get_collection
+    try:
+        collection = get_collection(project_id)
+        results = collection.get(include=["metadatas"])
+        filenames = []
+        seen = set()
+        for meta in results.get("metadatas", []):
+            fn = meta.get("filename", "")
+            if fn and fn not in seen:
+                seen.add(fn)
+                filenames.append(fn)
+        filenames.sort()
+    except Exception:
+        filenames = []
+
+    return {"project_id": project_id, "files": filenames, "total": len(filenames)}
+
+
+
 def delete_project(project_id: str, db: Session = Depends(get_db)):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
+    # Delete vectors from ChromaDB
     delete_project_vectors(project_id)
 
+    # Delete from DB
     db.delete(project)
     db.commit()
 
