@@ -80,3 +80,35 @@ async def query_project(request: QueryRequest):
         relevant_files=relevant_files,
         tokens_used=result["tokens_used"]
     )
+    
+
+# Store last 3 messages per project session
+conversation_memory = {}  # { project_id: [messages] }
+
+@router.post("/query")
+async def query(request: QueryRequest):
+    proj_id = request.project_id
+    
+    # Get conversation history
+    history = conversation_memory.get(proj_id, [])
+    
+    # Build context-aware question
+    if history:
+        last_exchange = history[-1]  # last Q&A
+        context_question = f"""
+Previous question: {last_exchange['question']}
+Previous answer summary: {last_exchange['answer'][:200]}...
+
+Current question: {request.question}
+"""
+    else:
+        context_question = request.question
+        
+    # Save to memory (keep last 3)
+    history.append({
+        "question": request.question,
+        "answer": result["answer"][:500]
+    })
+    conversation_memory[proj_id] = history[-3:]
+    
+    return response
