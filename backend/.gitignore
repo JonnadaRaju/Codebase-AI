@@ -7,3 +7,5 @@ chroma_persist_dir/
 .env
 
 chroma_db/
+
+frontend/node_modules/
