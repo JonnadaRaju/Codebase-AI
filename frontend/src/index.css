@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #1e1e1e;
+  color: #cccccc;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4f4f4f;
+}
+
+::-webkit-scrollbar-corner {
+  background: #1e1e1e;
+}
+
+input, textarea, button {
+  font-family: inherit;
+}
+
+.acode {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px;
+  background: #1e1e1e;
+  border: 1px solid #454545;
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin: 8px 0;
+  overflow-x: auto;
+  color: #d4d4d4;
+  line-height: 1.5;
+}
+
+.aic {
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 12px;
+  background: #2d2d2d;
+  border: 1px solid #454545;
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: #ce9178;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.animate-pulse-slow {
+  animation: blink 1.5s ease-in-out infinite;
+}
