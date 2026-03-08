@@ -1,14 +1,14 @@
 export const MODES = [
-  { id: 'explain', label: 'Explain', icon: '✦', ph: 'How does the authentication work?' },
-  { id: 'interview', label: 'Interview', icon: '◈', ph: 'Generate 5 interview questions' },
-  { id: 'review', label: 'Review', icon: '⊕', ph: 'Review code quality and issues' },
-  { id: 'debug', label: 'Debug', icon: '⊗', ph: 'Why is the database failing?' },
-  { id: 'architecture', label: 'Architecture', icon: '⬡', ph: 'Explain the system architecture' },
+  { id: 'explain', label: 'Explain', icon: '✦', emoji: '💡' },
+  { id: 'interview', label: 'Interview', icon: '◈', emoji: '🎯' },
+  { id: 'review', label: 'Review', icon: '⊕', emoji: '🔍' },
+  { id: 'debug', label: 'Debug', icon: '⊗', emoji: '🐛' },
+  { id: 'architecture', label: 'Architecture', icon: '⬡', emoji: '🏗️' },
 ];
 
 export const FILE_ICONS = {
   py: '🐍',
-  js: '🟡',
+  js: '🟨',
   ts: '🔹',
   jsx: '⚛️',
   tsx: '⚛️',
@@ -21,6 +21,42 @@ export const FILE_ICONS = {
   java: '☕',
   cpp: '⚙️',
   sh: '💲',
+  txt: '📝',
+  yaml: '⚙️',
+  yml: '⚙️',
+};
+
+export const QUICK_PROMPTS = {
+  explain: [
+    'How does authentication work?',
+    'Explain the database models',
+    'What does the main file do?',
+    'How are routes organized?'
+  ],
+  interview: [
+    'Generate 5 interview questions',
+    'Quiz me on this codebase',
+    'What are tricky parts to explain?',
+    'Generate senior-level questions'
+  ],
+  review: [
+    'Find security vulnerabilities',
+    'Check for code quality issues',
+    'Review error handling',
+    'Find performance problems'
+  ],
+  debug: [
+    'Why might this crash?',
+    'Find potential null errors',
+    'Check async/await usage',
+    'Find memory leaks'
+  ],
+  architecture: [
+    'Explain the system design',
+    'How do components connect?',
+    'What is the data flow?',
+    'Explain the folder structure'
+  ],
 };
 
 export const getFileIcon = (filename) => {
