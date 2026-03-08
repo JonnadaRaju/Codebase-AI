@@ -13,12 +13,21 @@ export function TopNavbar({
 }) {
   const [showDropdown, setShowDropdown] = React.useState(false);
 
+  const userData = JSON.parse(localStorage.getItem('codebase_ai_user')) || {}
+  const displayName = userData.full_name
+    || userData.name
+    || userData.username
+    || username
+    || 'Developer'
+  
+  const firstName = displayName.split(' ')[0]
+
   const getAvatarContent = () => {
-    if (!userAvatar) return username?.charAt(0).toUpperCase() || 'U';
+    if (!userAvatar) return firstName?.charAt(0).toUpperCase() || 'U';
     if (userAvatar.type === 'emoji') return userAvatar.value;
     if (userAvatar.type === 'custom') return null;
-    if (userAvatar.type === 'initials') return userAvatar.value || username?.charAt(0).toUpperCase();
-    return username?.charAt(0).toUpperCase();
+    if (userAvatar.type === 'initials') return userAvatar.value || firstName?.charAt(0).toUpperCase();
+    return firstName?.charAt(0).toUpperCase();
   };
 
   const isImage = userAvatar?.type === 'custom';
@@ -40,7 +49,7 @@ export function TopNavbar({
           onClick={onOpenProjects}
           className="px-5 py-2 rounded-full text-sm font-medium text-gray-500 hover:bg-gray-100 transition-all duration-200"
         >
-          My Project
+          My Projects
         </button>
         {MODES.map((mode) => (
           <button
@@ -81,7 +90,7 @@ export function TopNavbar({
                 <span className="text-white text-sm font-medium">{getAvatarContent()}</span>
               )}
             </div>
-            <span className="text-sm font-medium text-gray-700">{username}</span>
+            <span className="text-sm font-medium text-gray-700">{firstName}</span>
           </div>
           
           {showDropdown && (
@@ -98,12 +107,13 @@ export function TopNavbar({
                       <span className="text-white text-sm font-medium">{getAvatarContent()}</span>
                     )}
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{username}</div>
-                    <div className="text-xs text-gray-500">{username}@codebase.ai</div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
+                    <div className="text-xs text-gray-500 truncate">{username}@codebase.ai</div>
                   </div>
                 </div>
               </div>
+... (rest of the file)
               <button
                 onClick={() => {
                   setShowDropdown(false);
