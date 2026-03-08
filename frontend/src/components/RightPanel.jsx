@@ -121,7 +121,9 @@ export function RightPanel({
           </div>
           <div className="mt-3 pt-3 border-t border-white/20">
             <p className="text-xs opacity-70">Tokens Used</p>
-            <p className="text-2xl font-bold">{tokens.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-white mt-1">
+              {tokens > 0 ? tokens.toLocaleString() : '—'}
+            </p>
           </div>
         </div>
       </div>
