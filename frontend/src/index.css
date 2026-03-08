@@ -74,6 +74,55 @@ input, textarea, button {
   50% { opacity: 0.3; }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
 .animate-pulse-slow {
   animation: blink 1.5s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 300ms ease-out forwards;
+}
+
+.animate-pop-in {
+  animation: popIn 300ms ease-out forwards;
+  animation-fill-mode: both;
+}
+
+.animate-slide-up {
+  animation: slideUp 300ms ease-out forwards;
+}
+
+.animate-bounce {
+  animation: bounce 300ms ease-out;
 }
