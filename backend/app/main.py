@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routers import upload, query, projects
+from app.routers import upload, query, projects, auth
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import init_db
 
@@ -24,6 +24,7 @@ async def startup():
     init_db()
 
 
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(upload.router, prefix="/api", tags=["Upload"])
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(projects.router, prefix="/api", tags=["Projects"])
