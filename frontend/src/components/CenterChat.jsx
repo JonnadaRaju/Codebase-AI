@@ -40,11 +40,11 @@ export function CenterChat({
   const quickPrompts = QUICK_PROMPTS[activeMode] || QUICK_PROMPTS.explain;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+    <div className="flex-1 flex flex-col overflow-hidden bg-white">
       {/* Top Bar */}
       <div className="bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center">
         <h2 className="text-lg font-semibold text-gray-900">
-          {activeProject?.name || 'Select a project'}
+          {activeProject ? activeProject.name : 'Select a Project'}
         </h2>
         <button className="text-gray-400 hover:text-gray-600">
           <MoreHorizontal className="w-5 h-5" />
@@ -60,16 +60,19 @@ export function CenterChat({
             </div>
             <div className="text-center">
               <h3 className="text-xl font-semibold text-gray-900">How can I help you?</h3>
-              <p className="text-sm text-gray-500 max-w-xs text-center mt-1">
-                Select a mode and ask me anything about your codebase
+              <p className="text-sm text-gray-500 text-center max-w-xs mt-1">
+                {activeProject
+                  ? `Ask anything about "${activeProject.name}"`
+                  : 'Select a mode and ask me anything about your codebase'
+                }
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 justify-center mt-2">
+            <div className="flex flex-wrap gap-2 justify-center px-8 mt-4 max-w-2xl mx-auto">
               {quickPrompts.map((prompt, idx) => (
                 <button
                   key={idx}
                   onClick={() => onQuickPrompt(prompt)}
-                  className="px-4 py-2 bg-white rounded-full border border-gray-200 text-sm text-gray-600 hover:border-green-300 hover:text-green-600 cursor-pointer shadow-sm transition-all"
+                  className="px-4 py-2 bg-white rounded-full border border-gray-200 text-sm text-gray-600 hover:border-green-300 hover:text-green-600 cursor-pointer shadow-sm transition-all whitespace-nowrap"
                 >
                   {prompt}
                 </button>
@@ -145,7 +148,7 @@ export function CenterChat({
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4">
+      <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 z-30">
         <div className="relative">
           <textarea
             value={input}
