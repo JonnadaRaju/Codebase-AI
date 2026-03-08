@@ -1,110 +1,127 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Copy, MessageCircle, Settings } from 'lucide-react';
 import { getFileIcon } from '../constants';
 
 export function RightPanel({ 
-  allFiles, 
-  relFiles, 
-  showAll, 
-  setShowAll, 
-  active, 
-  onFileClick, 
-  tokens,
-  mode,
+  files = [], 
+  relFiles = [],
+  chatHistory = [],
+  tokens = 0,
+  onFileClick,
+  onHistoryClick,
+  modelName = 'llama3.2:3b',
+  provider = 'Ollama'
 }) {
-  const isUsed = (file) => relFiles.includes(file);
+  const [activeTab, setActiveTab] = useState('all');
+
+  const fileCount = files.length;
+  const usedCount = relFiles.length;
+
+  const filteredFiles = activeTab === 'used' 
+    ? files.filter(f => relFiles.includes(f))
+    : files;
 
   return (
-    <div className="w-[200px] flex-shrink-0 border-l border-white/[0.06] bg-bg2 flex flex-col overflow-hidden">
-      <div className="px-3.5 py-3 border-b border-white/[0.06]">
-        <div className="text-[10px] font-semibold text-ink3 uppercase tracking-wider">📁 Files</div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex p-2 gap-1 flex-shrink-0">
-        <button
-          onClick={() => setShowAll(true)}
-          className={`flex-1 py-1.5 rounded-md text-[10px] font-medium cursor-pointer transition-colors ${
-            showAll 
-              ? 'bg-surface text-ink border border-white/6' 
-              : 'bg-transparent text-ink3 hover:bg-surface hover:text-ink2'
-          }`}
-        >
-          All {allFiles.length > 0 && `(${allFiles.length})`}
-        </button>
-        <button
-          onClick={() => setShowAll(false)}
-          className={`flex-1 py-1.5 rounded-md text-[10px] font-medium cursor-pointer transition-colors ${
-            !showAll 
-              ? 'bg-surface text-ink border border-white/6' 
-              : 'bg-transparent text-ink3 hover:bg-surface hover:text-ink2'
-          }`}
-        >
-          Used {relFiles.length > 0 && `(${relFiles.length})`}
-        </button>
-      </div>
-
-      {/* File List */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2 chat-scroll">
-        {showAll ? (
-          allFiles.length === 0 ? (
-            <div className="text-center py-4 text-[11px] text-ink3 leading-relaxed">
-              {active ? 'Loading files...' : 'Select a project\nto see its files'}
-            </div>
+    <div className="w-72 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+      {/* History Section */}
+      <div className="px-4 pt-4 pb-2">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-sm font-semibold text-gray-900">History Chat</h3>
+          <button className="text-gray-400 hover:text-gray-600">
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+        
+        <div className="space-y-1 max-h-48 overflow-y-auto">
+          {chatHistory.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-4">No history yet</p>
           ) : (
-            allFiles.map((file, i) => {
-              const used = isUsed(file);
-              return (
-                <div
-                  key={i}
-                  onClick={() => onFileClick(file)}
-                  className={`flex items-center gap-1.5 p-2 rounded-md mb-0.5 border border-transparent cursor-pointer transition-colors ${
-                    used 
-                      ? 'bg-green/5 border-green/12 hover:bg-green/10' 
-                      : 'hover:bg-surface hover:border-white/6'
-                  }`}
-                  title={`[${mode}] ${file}`}
-                >
-                  <span className="text-[11px] flex-shrink-0">{getFileIcon(file)}</span>
-                  <span className={`text-[10px] truncate font-mono ${used ? 'text-green-2' : 'text-ink3'}`}>
-                    {file}
-                  </span>
-                  {used && <span className="ml-auto text-green text-[9px] flex-shrink-0">✦</span>}
-                </div>
-              );
-            })
-          )
-        ) : (
-          relFiles.length === 0 ? (
-            <div className="text-center py-4 text-[11px] text-ink3 leading-relaxed">
-              Files used in last answer appear here
-            </div>
-          ) : (
-            relFiles.map((file, i) => (
-              <div
-                key={i}
-                onClick={() => onFileClick(file)}
-                className="flex items-center gap-1.5 p-2 rounded-md mb-0.5 border border-green/12 bg-green/5 cursor-pointer hover:bg-green/10 transition-colors"
-                title={`[${mode}] ${file}`}
+            chatHistory.slice(0, 10).map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => onHistoryClick?.(item)}
+                className="w-full flex gap-3 items-start p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition-all text-left"
               >
-                <span className="text-[11px] flex-shrink-0">{getFileIcon(file)}</span>
-                <span className="text-[10px] truncate font-mono text-green-2">
-                  {file}
-                </span>
-              </div>
+                <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <MessageCircle className="w-4 h-4 text-gray-400" />
+                </div>
+                <p className="text-xs text-gray-600 leading-relaxed line-clamp-2">
+                  "{item.substring(0, 50)}..."
+                </p>
+              </button>
             ))
-          )
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Tokens Box */}
-      <div className="p-2">
-        <div className="p-3 rounded-lg border border-white/6 bg-surface">
-          <div className="text-[9px] font-semibold text-ink3 uppercase tracking-wider">Tokens Used</div>
-          <div className="text-2xl font-bold text-ink mt-0.5 mb-0.25 tracking-tight font-mono">
-            {tokens > 0 ? tokens.toLocaleString() : '—'}
+      {/* Files Section */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Files</h3>
+        
+        <div className="flex gap-1 mb-3">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              activeTab === 'all' 
+                ? 'bg-gray-900 text-white' 
+                : 'text-gray-500 hover:bg-gray-100'
+            }`}
+          >
+            All ({fileCount})
+          </button>
+          <button
+            onClick={() => setActiveTab('used')}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${
+              activeTab === 'used' 
+                ? 'bg-gray-900 text-white' 
+                : 'text-gray-500 hover:bg-gray-100'
+            }`}
+          >
+            Used ({usedCount})
+          </button>
+        </div>
+        
+        <div className="max-h-48 overflow-y-auto space-y-1">
+          {filteredFiles.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-2">No files</p>
+          ) : (
+            filteredFiles.map((file, idx) => (
+              <button
+                key={idx}
+                onClick={() => onFileClick?.(file)}
+                className="w-full flex gap-2 items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-all text-left"
+              >
+                <span className="text-sm">{getFileIcon(file)}</span>
+                <span className="text-xs font-mono text-gray-600 truncate flex-1">
+                  {file.split('/').pop()}
+                </span>
+                {relFiles.includes(file) && (
+                  <span className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded text-xs">used</span>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Model Card */}
+      <div className="mx-3 mb-3 mt-auto">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-4 text-white">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-xs opacity-80 flex items-center gap-1">
+                <span>⚡</span> Current Model
+              </p>
+              <p className="text-lg font-bold mt-1">{modelName}</p>
+              <p className="text-xs opacity-70">{provider} · Local</p>
+            </div>
+            <button className="text-white/80 hover:text-white">
+              <Settings className="w-4 h-4" />
+            </button>
           </div>
-          <div className="text-[10px] text-ink3">
-            {tokens > 0 ? (active ? 'Ollama · Local' : 'OpenRouter') : 'No queries yet'}
+          <div className="mt-3 pt-3 border-t border-white/20">
+            <p className="text-xs opacity-70">Tokens Used</p>
+            <p className="text-2xl font-bold">{tokens.toLocaleString()}</p>
           </div>
         </div>
       </div>
