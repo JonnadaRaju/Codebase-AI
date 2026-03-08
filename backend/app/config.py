@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE_KB: int = 500
     TOP_K_RETRIEVAL:  int = 8
 
+    # ── JWT Auth ────────────────────────────────────────────
+    JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
