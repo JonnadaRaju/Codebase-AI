@@ -1,5 +1,6 @@
 import React from 'react';
 import { getFileIcon } from '../constants';
+import { Avatar } from './Avatar';
 
 export function FileExplorer({ 
   files, 
@@ -9,7 +10,9 @@ export function FileExplorer({
   onFileSelect, 
   onFileAction,
   onUpload,
-  uploading 
+  uploading,
+  userAvatar,
+  username,
 }) {
   const [expanded, setExpanded] = React.useState({});
   const [uploadMode, setUploadMode] = React.useState(false);
@@ -208,6 +211,20 @@ export function FileExplorer({
           <button onClick={() => handleAction('architecture')} className="w-full px-4 py-1 text-sm text-left hover:bg-vs-hover">
             ⬡ Architecture
           </button>
+        </div>
+      )}
+
+      {/* User Profile */}
+      {username && (
+        <div className="mt-auto p-3 border-t border-vs-border flex items-center gap-3">
+          <Avatar avatar={userAvatar} size="md" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-ink truncate">{username}</div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              <span className="text-xs text-gray-500">Online</span>
+            </div>
+          </div>
         </div>
       )}
     </div>
