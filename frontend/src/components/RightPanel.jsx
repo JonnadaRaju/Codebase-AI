@@ -81,7 +81,7 @@ export function RightPanel({
           </button>
         </div>
         
-        <div className="max-h-48 overflow-y-auto space-y-1">
+        <div className="overflow-y-auto" style={{maxHeight: 'calc(100vh - 420px)'}}>
           {filteredFiles.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-2">No files</p>
           ) : (
