@@ -65,6 +65,7 @@ def get_project_files(project_id: str, db: Session = Depends(get_db)):
 
 
 
+@router.delete("/projects/{project_id}")
 def delete_project(project_id: str, db: Session = Depends(get_db)):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
