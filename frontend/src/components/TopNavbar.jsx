@@ -13,21 +13,25 @@ export function TopNavbar({
 }) {
   const [showDropdown, setShowDropdown] = React.useState(false);
 
-  const userData = JSON.parse(localStorage.getItem('codebase_ai_user')) || {}
-  const displayName = userData.full_name
-    || userData.name
-    || userData.username
-    || username
-    || 'Developer'
-  
-  const firstName = displayName.split(' ')[0]
+  const userData = JSON.parse(localStorage.getItem('codebase_ai_user') || '{}')
+  const displayName =
+    userData.full_name ||
+    userData.fullName ||
+    userData.name ||
+    userData.first_name ||
+    userData.username ||
+    username ||
+    'User'
+
+  const firstName = displayName.split(/[\s_@]/)[0]
+  const formatted = firstName.charAt(0).toUpperCase() + firstName.slice(1)
 
   const getAvatarContent = () => {
-    if (!userAvatar) return firstName?.charAt(0).toUpperCase() || 'U';
+    if (!userAvatar) return formatted?.charAt(0).toUpperCase() || 'U';
     if (userAvatar.type === 'emoji') return userAvatar.value;
     if (userAvatar.type === 'custom') return null;
-    if (userAvatar.type === 'initials') return userAvatar.value || firstName?.charAt(0).toUpperCase();
-    return firstName?.charAt(0).toUpperCase();
+    if (userAvatar.type === 'initials') return userAvatar.value || formatted?.charAt(0).toUpperCase();
+    return formatted?.charAt(0).toUpperCase();
   };
 
   const isImage = userAvatar?.type === 'custom';
@@ -44,13 +48,16 @@ export function TopNavbar({
       </div>
 
       {/* Center Section - Mode Tabs */}
-      <div className="flex items-center gap-2">
+      <nav className="flex items-center gap-1">
         <button
           onClick={onOpenProjects}
           className="px-5 py-2 rounded-full text-sm font-medium text-gray-500 hover:bg-gray-100 transition-all duration-200"
         >
           My Projects
         </button>
+        
+        <div className="w-px h-5 bg-gray-200 mx-2"/>
+
         {MODES.map((mode) => (
           <button
             key={mode.id}
@@ -63,8 +70,8 @@ export function TopNavbar({
           >
             {mode.label}
           </button>
-        ))}
-      </div>
+          ))}
+      </nav>
 
       {/* Right Section */}
       <div className="flex items-center gap-4">
@@ -90,7 +97,7 @@ export function TopNavbar({
                 <span className="text-white text-sm font-medium">{getAvatarContent()}</span>
               )}
             </div>
-            <span className="text-sm font-medium text-gray-700">{firstName}</span>
+            <span className="text-sm font-medium text-gray-700">{formatted}</span>
           </div>
           
           {showDropdown && (
