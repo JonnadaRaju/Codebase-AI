@@ -11,6 +11,16 @@ from app.services.embedder import store_chunks
 router = APIRouter()
 
 
+def clean_github_url(url: str) -> str:
+    url = url.strip()
+    if not url.startswith('http'):
+        url = 'https://' + url
+    if url.endswith('.git'):
+        url = url[:-4]
+    url = url.rstrip('/')
+    return url
+
+
 @router.post("/upload/zip")
 async def upload_zip(
     file: UploadFile = File(...),
@@ -72,6 +82,11 @@ async def upload_github(
     if "github.com" not in github_url:
         raise HTTPException(status_code=400, detail="Please provide a valid GitHub URL.")
 
+    github_url = clean_github_url(github_url)
+
+    if not github_url.endswith(".git"):
+        github_url = github_url + ".git"
+
     project_id = str(uuid.uuid4())
 
     try:
@@ -91,10 +106,22 @@ async def upload_github(
         project.status = "ready"
         db.commit()
 
+    except HTTPException:
+        project.status = "failed"
+        db.commit()
+        raise
     except Exception as e:
         project.status = "failed"
         db.commit()
-        raise HTTPException(status_code=500, detail=str(e))
+        error_msg = str(e).lower()
+        if 'not found' in error_msg or 'could not find' in error_msg:
+            raise HTTPException(status_code=404, detail="Repository not found. Check if it is public.")
+        elif 'rate limit' in error_msg or '403' in error_msg:
+            raise HTTPException(status_code=429, detail="GitHub rate limit. Try again in 1 hour.")
+        elif 'timeout' in error_msg or 'timed out' in error_msg:
+            raise HTTPException(status_code=408, detail="Repository too large or slow. Try ZIP upload.")
+        else:
+            raise HTTPException(status_code=500, detail=f"Clone failed: {error_msg}")
 
     return {
         "project_id": project_id,
