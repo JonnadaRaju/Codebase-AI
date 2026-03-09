@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, Github } from 'lucide-react';
+import { X, Upload, Github, Loader2 } from 'lucide-react';
 
 export function MyProjectsPanel({ 
   isOpen, 
@@ -12,21 +12,64 @@ export function MyProjectsPanel({
 }) {
   const [projectName, setProjectName] = useState('');
   const [githubUrl, setGithubUrl] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
+  const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const fileInputRef = useRef(null);
 
-  const handleFileUpload = async (e) => {
+  const validateGithubUrl = (url) => {
+    const pattern = /^(https?:\/\/)?(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/i;
+    return pattern.test(url.trim());
+  };
+
+  const canUpload = projectName.trim().length > 0 && (githubUrl.trim().length > 0 || selectedFile !== null);
+
+  const handleFileChange = (e) => {
     const file = e.target.files?.[0];
-    if (!file || !projectName.trim()) return;
+    if (file) {
+      setSelectedFile(file);
+      if (!projectName.trim()) {
+        setProjectName(file.name.replace('.zip', ''));
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    setError('');
     
+    if (!canUpload) {
+      setError('Select a ZIP or enter GitHub URL');
+      return;
+    }
+
+    if (!projectName.trim()) {
+      setError('Enter a project name');
+      return;
+    }
+
+    const mode = selectedFile ? 'zip' : 'github';
+
+    if (mode === 'github' && !validateGithubUrl(githubUrl)) {
+      setError('Invalid URL. Use: github.com/user/repo');
+      return;
+    }
+
     setUploading(true);
+    if (mode === 'github') {
+      setUploadStatus('Cloning repository...');
+    }
     try {
-      await onUpload(projectName, file);
+      await onUpload(projectName, selectedFile, githubUrl);
       setProjectName('');
+      setGithubUrl('');
+      setSelectedFile(null);
     } catch (err) {
-      console.error(err);
+      setError(err.message || 'Upload failed');
     } finally {
       setUploading(false);
+      setUploadStatus('');
     }
   };
 
@@ -41,14 +84,14 @@ export function MyProjectsPanel({
       {isOpen && (
         <>
           <div 
-            className="fixed inset-0 bg-black/20 z-40 backdrop-blur-[1px]"
+            className="fixed inset-0 bg-black/20 z-40"
             onClick={onClose}
           />
           <div 
-            className="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed inset-y-0 left-0 w-72 bg-white shadow-2xl z-50 flex flex-col overflow-hidden"
           >
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
+            {/* Header - fixed */}
+            <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center flex-shrink-0">
               <h2 className="font-semibold text-gray-900">My Projects</h2>
               <button 
                 onClick={onClose}
@@ -58,8 +101,8 @@ export function MyProjectsPanel({
               </button>
             </div>
 
-            {/* Project List */}
-            <div className="flex-1 overflow-y-auto p-3">
+            {/* Project List - scrollable */}
+            <div className="flex-1 overflow-y-auto px-4 py-3">
               {projects.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-8">No projects yet</p>
               ) : (
@@ -99,7 +142,7 @@ export function MyProjectsPanel({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDelete(project.project_id);
+                          setDeleteConfirm(project);
                         }}
                         className="text-gray-400 hover:text-red-500 transition-opacity"
                       >
@@ -111,8 +154,8 @@ export function MyProjectsPanel({
               )}
             </div>
 
-            {/* Upload Section */}
-            <div className="px-4 py-4 border-t-2 border-dashed border-gray-100 mt-2">
+            {/* Upload Section - fixed at bottom */}
+            <div className="flex-shrink-0 border-t border-gray-100 px-4 py-4 bg-white">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Upload New Project
               </p>
@@ -123,13 +166,13 @@ export function MyProjectsPanel({
                 className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-green-300 hover:bg-green-50 transition-all"
               >
                 <Upload className="w-6 h-6 mx-auto text-gray-400 mb-1" />
-                <p className="text-sm text-gray-600">Drop ZIP here</p>
+                <p className="text-sm text-gray-600">{selectedFile ? selectedFile.name : 'Drop ZIP here'}</p>
                 <p className="text-xs text-gray-400">or click to browse</p>
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept=".zip"
-                  onChange={handleFileUpload}
+                  onChange={handleFileChange}
                   className="hidden"
                 />
               </div>
@@ -141,10 +184,18 @@ export function MyProjectsPanel({
                   type="text"
                   placeholder="github.com/user/repo"
                   value={githubUrl}
-                  onChange={(e) => setGithubUrl(e.target.value)}
+                  onChange={(e) => {
+                    setGithubUrl(e.target.value);
+                    if (e.target.value.trim()) {
+                      setSelectedFile(null);
+                    }
+                  }}
                   className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm placeholder-gray-400 outline-none focus:border-green-300 focus:ring-1 focus:ring-green-100"
                 />
               </div>
+              <p className="text-xs text-gray-400 mt-1 px-1">
+                Example: github.com/facebook/react
+              </p>
 
               {/* Project Name Input */}
               <input
@@ -155,18 +206,62 @@ export function MyProjectsPanel({
                 className="w-full mt-3 text-sm bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-green-300"
               />
 
-              {/* Upload Button */}
+              {/* Upload Button - ALWAYS VISIBLE */}
               <button
-                onClick={() => {
-                   if (fileInputRef.current) fileInputRef.current.click();
-                }}
-                disabled={uploading || !projectName.trim()}
-                className="w-full mt-3 bg-green-500 text-white rounded-xl py-2.5 font-medium hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={handleUpload}
+                disabled={uploading || !canUpload}
+                className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-all mt-2 ${
+                  canUpload && !uploading
+                    ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
               >
-                {uploading ? 'Uploading...' : 'Upload Project'}
+                {uploading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {uploadStatus || 'Processing...'}
+                  </span>
+                ) : 'Upload Project'}
               </button>
+
+              {/* Error Message */}
+              {error && (
+                <div className="mt-2 text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">
+                  {error}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Delete Confirmation Dialog */}
+          {deleteConfirm && (
+            <>
+              <div className="fixed inset-0 bg-black/40 z-50" onClick={() => setDeleteConfirm(null)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 bg-white rounded-xl shadow-2xl z-50 p-5">
+                <h3 className="font-semibold text-gray-900 mb-2">Delete Project?</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Are you sure you want to delete <span className="font-medium text-gray-700">"{deleteConfirm.name}"</span>? This action cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1 py-2 px-4 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDelete(deleteConfirm.project_id);
+                      setDeleteConfirm(null);
+                    }}
+                    className="flex-1 py-2 px-4 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </>
