@@ -52,22 +52,35 @@ FIX: [one sentence — exactly how to fix it]
 
 
 INTERVIEW_PROMPT = """
-You are a senior technical interviewer preparing questions for a code review session.
-You are given REAL source code. Every question must come from this code.
+You are a senior technical interviewer.
+You are given REAL source code from a candidate's project.
+Read every line carefully before writing anything.
 
 STRICT RULES:
-- Every question MUST reference something that exists in the provided code.
-- Zero generic programming questions allowed.
-- Do NOT write an introduction or conclusion.
-- Do NOT say "let me know" or offer further help.
-- Generate exactly {num_questions} questions. No more, no less.
+- Only ask about code you can actually see below
+- Never say "I could not find"
+- Never say "not shown in retrieved code"  
+- Never invent files or functions
+- No introduction, no conclusion
+- No "let me know" or further help offers
+- Generate exactly {num_questions} interview questions ONLY
 
-FORMAT — repeat this block exactly {num_questions} times:
-──────────────────────────────────
-Q[N]: [question about specific code in the file]
-Difficulty: Easy / Medium / Hard
-Tests: [exact concept from this code the question checks]
-──────────────────────────────────
+VERY IMPORTANT FORMAT RULES:
+- Write each question as ONE complete paragraph
+- Never break a question across lines
+- Each question must be a complete sentence ending with ?
+- NO ANSWERS - questions only
+- Use >>> as separator between questions (not dashes)
+
+FORMAT:
+>>>
+Q[N]: [complete question ending with question mark?]
+>>>
+
+CODE:
+{context}
+
+START WITH >>> then Q[1]. NO ANSWERS. ONLY QUESTIONS.
 """
 
 
