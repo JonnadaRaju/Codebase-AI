@@ -39,6 +39,29 @@ def get_system_prompt(mode: str, num_questions: int = 5) -> str:
 
 @router.post("/query", response_model=QueryResponse)
 async def query_project(request: QueryRequest):
+    print(f"DEBUG: mode={request.mode}, question={request.question[:50] if request.question else 'None'}")
+    
+    # Interview mode doesn't need code context - generate general questions
+    if request.mode == "interview":
+        print("DEBUG: Entering interview mode - skipping code retrieval")
+        system_prompt = get_system_prompt(request.mode, request.num_questions or 5)
+        context = "You are generating general interview questions applicable to any software project. Focus on the 14 categories: Project Overview, Architecture, Technology Choices, Database, API Design, Security, Code Quality, Error Handling, Testing, Performance, Feature-Specific, Problem Solving, Improvements, and Collaboration."
+        user_query = request.question or "Generate interview questions and answers for this project"
+        
+        try:
+            result = generate_response(system_prompt, context, user_query)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"LLM generation failed: {str(e)}")
+
+        return QueryResponse(
+            answer=result["answer"],
+            mode=request.mode,
+            relevant_files=[],
+            tokens_used=result["tokens_used"]
+        )
+
+    print("DEBUG: Not interview mode - will retrieve code")
+
     user_query = request.question
     if request.mode == "debug" and request.error_message:
         user_query = f"Error/Issue: {request.error_message}\n\nContext: {request.question}"
@@ -80,35 +103,3 @@ async def query_project(request: QueryRequest):
         relevant_files=relevant_files,
         tokens_used=result["tokens_used"]
     )
-    
-
-# Store last 3 messages per project session
-conversation_memory = {}  # { project_id: [messages] }
-
-@router.post("/query")
-async def query(request: QueryRequest):
-    proj_id = request.project_id
-    
-    # Get conversation history
-    history = conversation_memory.get(proj_id, [])
-    
-    # Build context-aware question
-    if history:
-        last_exchange = history[-1]  # last Q&A
-        context_question = f"""
-Previous question: {last_exchange['question']}
-Previous answer summary: {last_exchange['answer'][:200]}...
-
-Current question: {request.question}
-"""
-    else:
-        context_question = request.question
-        
-    # Save to memory (keep last 3)
-    history.append({
-        "question": request.question,
-        "answer": result["answer"][:500]
-    })
-    conversation_memory[proj_id] = history[-3:]
-    
-    return response
