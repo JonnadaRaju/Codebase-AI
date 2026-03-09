@@ -21,6 +21,13 @@ export function Sidebar({
   const fileInputRef = React.useRef(null);
   const [drag, setDrag] = React.useState(false);
   const [selectedZip, setSelectedZip] = React.useState(null);
+  const [uploadStatus, setUploadStatus] = React.useState('');
+  const [error, setError] = React.useState('');
+
+  const validateGithubUrl = (url) => {
+    const pattern = /^(https?:\/\/)?(www\.)?github\.com\/[\w-]+\/[\w.-]+\/?$/i;
+    return pattern.test(url.trim());
+  };
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -43,10 +50,31 @@ export function Sidebar({
   };
 
   const handleUpload = () => {
-    if (!projectName.trim()) return;
-    if (uploadMode === 'zip' && !selectedZip) return;
-    if (uploadMode === 'github' && !githubUrl.trim()) return;
-    
+    setError('');
+    if (!projectName.trim()) {
+      setError('Enter a project name');
+      return;
+    }
+
+    if (uploadMode === 'github') {
+      if (!githubUrl.trim()) {
+        setError('Enter a GitHub URL');
+        return;
+      }
+      if (!validateGithubUrl(githubUrl)) {
+        setError('Invalid URL. Use: github.com/user/repo');
+        return;
+      }
+    }
+
+    if (uploadMode === 'zip' && !selectedZip) {
+      setError('Select a ZIP file');
+      return;
+    }
+
+    if (uploadMode === 'github') {
+      setUploadStatus('Cloning repository...');
+    }
     onUpload();
   };
 
@@ -126,15 +154,23 @@ export function Sidebar({
           <div className="text-[9px] text-ink3 font-medium">or GitHub</div>
           <div className="flex-1 h-px bg-white/6" />
         </div>
-        <div className="relative mb-2">
+        <div className="relative mb-1">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs">🐙</span>
           <input 
             className="w-full bg-surface border border-white/6 rounded-lg py-1.5 pl-8 pr-3 text-[11px] text-ink outline-none focus:border-white/16 transition-colors placeholder:text-ink3"
             placeholder="github.com/user/repo"
             value={githubUrl}
-            onChange={(e) => { setGithubUrl(e.target.value); setUploadMode('github'); }}
+            onChange={(e) => { 
+              setGithubUrl(e.target.value); 
+              if (e.target.value.trim()) {
+                setUploadMode('github');
+              }
+            }}
           />
         </div>
+        <p className="text-[10px] text-ink3 mb-2 px-1">
+          Example: github.com/facebook/react
+        </p>
         <input 
           className="w-full bg-surface border border-white/6 rounded-lg py-1.5 px-3 text-[11px] text-ink outline-none focus:border-white/16 transition-colors placeholder:text-ink3 mb-2"
           placeholder="Project name..."
@@ -148,7 +184,21 @@ export function Sidebar({
         >
           {uploading ? 'Processing...' : 'Upload & Analyze'}
         </button>
-        {uploading && <div className="h-0.5 rounded-full bg-gradient-to-r from-green via-blue to-green bg-[length:200%] animate-pulse mt-2" />}
+        {error && (
+          <div className="mt-2 text-[10px] text-red bg-red/10 px-2 py-1.5 rounded-lg">
+            {error}
+          </div>
+        )}
+        {uploading && (
+          <div className="mt-2 p-2 bg-green/10 rounded-lg border border-green/20">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 border border-green/50 border-t-green rounded-full animate-spin" />
+              <span className="text-[10px] text-green-2 font-medium">
+                {uploadStatus || 'Processing...'}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Projects List */}
