@@ -4,8 +4,8 @@ import { api } from '../services/api';
 import { TopNavbar } from './TopNavbar';
 import { CenterChat } from './CenterChat';
 import { RightPanel } from './RightPanel';
-import { FloatingButtons } from './FloatingButtons';
 import { MyProjectsPanel } from './MyProjectsPanel';
+import { Trash2, Plus } from 'lucide-react';
 
 export function Chat() {
   const navigate = useNavigate();
@@ -16,6 +16,7 @@ export function Chat() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [improving, setImproving] = useState(false);
   const [mode, setMode] = useState('explain');
   const [relFiles, setRelFiles] = useState([]);
   const [tokens, setTokens] = useState(0);
@@ -52,10 +53,17 @@ export function Chat() {
     }
   };
 
-  const handleUpload = async (name, file) => {
+  const handleUpload = async (name, file, githubUrl = null) => {
     setUploading(true);
     try {
-      const data = await api.uploadZip(name, file);
+      let data;
+      if (githubUrl) {
+        data = await api.uploadGithub(name, githubUrl);
+      } else if (file) {
+        data = await api.uploadZip(name, file);
+      } else {
+        throw new Error('No file or GitHub URL provided');
+      }
       await fetchProjects();
       setActiveProject(data);
       const projectFiles = await api.getProjectFiles(data.project_id);
@@ -63,6 +71,7 @@ export function Chat() {
       setShowProjects(false);
     } catch (e) {
       console.error(e);
+      throw e;
     } finally {
       setUploading(false);
     }
@@ -78,6 +87,36 @@ export function Chat() {
       await fetchProjects();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleImprove = async () => {
+    if (!input.trim()) return;
+    if (!activeProject) return;
+
+    setImproving(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('codebase_ai_token')}`
+        },
+        body: JSON.stringify({
+          project_id: activeProject.project_id,
+          mode,
+          question: `Rewrite this question to be more specific and detailed for a code analysis tool. Return ONLY the improved question, nothing else: "${input}"`
+        })
+      });
+      const data = await response.json();
+      const improved = data.answer || data.response || '';
+      if (improved) {
+        setInput(improved.trim());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setImproving(false);
     }
   };
 
@@ -115,6 +154,15 @@ export function Chat() {
 
   const handleQuickPrompt = (prompt) => {
     setInput(prompt);
+  };
+
+  const handleRegenerate = () => {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    if (lastUserMsg) {
+      setMessages(prev => prev.slice(0, -1));
+      setInput(lastUserMsg.content);
+      setTimeout(() => handleSend(), 0);
+    }
   };
 
   const handleClearChat = () => {
@@ -158,11 +206,24 @@ export function Chat() {
       />
       
       <div className="flex flex-1 overflow-hidden">
-        <FloatingButtons
-          onClearChat={handleClearChat}
-          onNewChat={handleNewChat}
-        />
-        
+        {/* Left strip for chat actions */}
+        <div className="w-14 flex-shrink-0 border-r border-gray-100 flex flex-col items-center justify-center gap-3 bg-white">
+          <button
+            onClick={handleClearChat}
+            title="Clear Chat"
+            className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center hover:bg-gray-700 transition-all"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleNewChat}
+            title="New Chat"
+            className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center hover:bg-gray-700 transition-all"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+
         <CenterChat
           messages={messages}
           input={input}
@@ -173,6 +234,10 @@ export function Chat() {
           activeProject={activeProject}
           userAvatar={userAvatar}
           onQuickPrompt={handleQuickPrompt}
+          onRegenerate={handleRegenerate}
+          files={files}
+          onImprove={handleImprove}
+          improving={improving}
         />
         
         <RightPanel
