@@ -18,10 +18,6 @@ export function AnswerRenderer({ content }) {
   };
 
   try {
-    const lines = content.split('\n');
-    const elements = [];
-    let i = 0;
-
     const formatText = (txt) => {
       if (!txt || typeof txt !== 'string') return txt;
       try {
@@ -53,6 +49,56 @@ export function AnswerRenderer({ content }) {
         return txt;
       }
     };
+
+    const isInterviewFormat = (raw) => /Q\[\d+\]:/i.test(raw) && !/A\[\d+\]:/i.test(raw);
+
+    const parseInterview = (raw) => {
+      const questions = [];
+      const blocks = raw.split('>>>').filter(b => b.trim());
+
+      blocks.forEach(block => {
+        const lines = block.trim().split('\n').filter(l => l.trim());
+        let qText = '';
+
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (/^Q\[\d+\]:/.test(trimmed)) {
+            qText = trimmed;
+          } else if (qText && trimmed) {
+            qText += ' ' + trimmed;
+          }
+        });
+
+        if (qText) {
+          questions.push(qText);
+        }
+      });
+
+      return questions;
+    };
+
+    const renderInterview = (raw) => {
+      const questions = parseInterview(raw);
+      return (
+        <div className="space-y-3">
+          {questions.map((q, i) => (
+            <div key={i} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
+              <p className="text-sm font-semibold text-gray-900 leading-relaxed">
+                {formatText(q)}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    if (isInterviewFormat(content)) {
+      return renderInterview(content);
+    }
+
+    const lines = content.split('\n');
+    const elements = [];
+    let i = 0;
 
     const isFlowStep = (ln) => /^[1-9️⃣🔟]+[\s\uFE0F]*[\.:\-\)]/.test(ln) || /^\d+️⃣/.test(ln) || /^[①-⑩]/.test(ln);
     const isArrow = (ln) => /^\s*[↓→←↑▼▶]/.test(ln) || ln.trim() === '↓' || ln.trim() === '→';
