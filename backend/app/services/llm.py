@@ -1,4 +1,5 @@
 import requests
+import json
 from app.config import settings
 
 # ── OpenRouter free models (fallback order) ───────────────────────────────────
@@ -9,7 +10,7 @@ FREE_MODELS = [
 
 
 # ── Ollama (local) ────────────────────────────────────────────────────────────
-def _call_ollama(system_prompt: str, user_message: str) -> dict:
+def _call_ollama(system_prompt: str, user_message: str, stream: bool = False):
     try:
         response = requests.post(
             f"{settings.OLLAMA_BASE_URL}/api/chat",
@@ -19,7 +20,7 @@ def _call_ollama(system_prompt: str, user_message: str) -> dict:
                     {"role": "system", "content": system_prompt},
                     {"role": "user",   "content": user_message},
                 ],
-                "stream": False,
+                "stream": stream,
                 "options": {
                     "temperature":   0.1,   # lower = more focused, less hallucination
                     "num_predict":   2048,
@@ -28,19 +29,42 @@ def _call_ollama(system_prompt: str, user_message: str) -> dict:
                     "num_ctx":       8192,  # larger context window — sees more code
                 }
             },
-            timeout=180   # Ollama needs more time than cloud
+            timeout=180 if not stream else 300,
+            stream=stream
         )
         response.raise_for_status()
-        data = response.json()
 
-        answer = data.get("message", {}).get("content", "")
-        tokens = data.get("eval_count", 0) + data.get("prompt_eval_count", 0)
+        if stream:
+            def generate():
+                chunk_num = 0
+                for line in response.iter_lines():
+                    if line:
+                        data = line.decode('utf-8')
+                        if data.startswith('data: '):
+                            data = data[6:]
+                        if data.strip() == '[DONE]':
+                            break
+                        try:
+                            json_data = json.loads(data)
+                            content = json_data.get('message', {}).get('content', '')
+                            if content:
+                                chunk_num += 1
+                                yield content
+                        except:
+                            continue
+                print(f"DEBUG: Ollama streamed {chunk_num} chunks")
+            
+            return generate()
+        else:
+            data = response.json()
+            answer = data.get("message", {}).get("content", "")
+            tokens = data.get("eval_count", 0) + data.get("prompt_eval_count", 0)
 
-        print(f"✅ Ollama model used: {settings.OLLAMA_MODEL}")
-        return {
-            "answer":      answer,
-            "tokens_used": tokens,
-        }
+            print(f"✅ Ollama model used: {settings.OLLAMA_MODEL}")
+            return {
+                "answer":      answer,
+                "tokens_used": tokens,
+            }
 
     except requests.exceptions.ConnectionError:
         raise Exception(
@@ -113,7 +137,7 @@ def _call_openrouter(system_prompt: str, user_message: str) -> dict:
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
-def generate_response(system_prompt: str, context: str, user_query: str) -> dict:
+def generate_response(system_prompt: str, context: str, user_query: str, stream: bool = False):
     """
     Routes to Ollama or OpenRouter based on LLM_PROVIDER in .env
 
@@ -137,6 +161,8 @@ Always mention exact filenames and function names you see in the code."""
     print(f"🔀 Provider: {provider} | Model: {settings.OLLAMA_MODEL if provider == 'ollama' else 'openrouter'}")
 
     if provider == "ollama":
-        return _call_ollama(system_prompt, user_message)
+        return _call_ollama(system_prompt, user_message, stream=stream)
     else:
+        if stream:
+            raise Exception("Streaming not supported for OpenRouter")
         return _call_openrouter(system_prompt, user_message)
