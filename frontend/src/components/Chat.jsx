@@ -95,28 +95,44 @@ export function Chat() {
     if (!activeProject) return;
 
     setImproving(true);
+    
+    let fullContent = '';
+    const tempMsg = { role: 'ai', content: '', mode: 'improve' };
+    setMessages(prev => [...prev, tempMsg]);
+
     try {
-      const response = await fetch('http://localhost:8000/api/query', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('codebase_ai_token')}`
+      await api.queryStream(
+        {
+          projectId: activeProject.project_id,
+          mode: 'explain',
+          question: `Rewrite this question to be more specific and detailed for a code analysis tool. Return ONLY the improved question, nothing else: "${input}"`,
         },
-        body: JSON.stringify({
-          project_id: activeProject.project_id,
-          mode,
-          question: `Rewrite this question to be more specific and detailed for a code analysis tool. Return ONLY the improved question, nothing else: "${input}"`
-        })
-      });
-      const data = await response.json();
-      const improved = data.answer || data.response || '';
-      if (improved) {
-        setInput(improved.trim());
+        (chunk) => {
+          fullContent += chunk;
+          setMessages(prev => {
+            const newMsgs = [...prev];
+            newMsgs[newMsgs.length - 1] = { 
+              ...tempMsg, 
+              content: fullContent 
+            };
+            return newMsgs;
+          });
+        },
+        () => {},
+        (error) => {
+          setMessages(prev => prev.slice(0, -1));
+          console.error(error);
+        }
+      );
+      
+      if (fullContent) {
+        setInput(fullContent.trim());
       }
     } catch (e) {
       console.error(e);
     } finally {
       setImproving(false);
+      setMessages(prev => prev.slice(0, -1));
     }
   };
 
@@ -130,18 +146,50 @@ export function Chat() {
     setInput('');
     setLoading(true);
 
+    let fullContent = '';
+    let aiMsgAdded = false;
+    const tempAiMsg = { role: 'ai', content: '', mode, files: [] };
+
     try {
-      const data = await api.query({
-        projectId: activeProject.project_id,
-        mode,
-        question: query,
-      });
-      setMessages(prev => [
-        ...prev,
-        { role: 'ai', content: data.answer, mode: data.mode, files: data.relevant_files }
-      ]);
-      setRelFiles(data.relevant_files || []);
-      setTokens(prev => prev + (data.tokens || 0));
+      await api.queryStream(
+        {
+          projectId: activeProject.project_id,
+          mode,
+          question: query,
+        },
+        (chunk) => {
+          fullContent += chunk;
+          setMessages(prev => {
+            const newMsgs = [...prev];
+            if (!aiMsgAdded) {
+              newMsgs.push({ 
+                ...tempAiMsg, 
+                content: fullContent,
+                mode,
+                files: [] 
+              });
+              aiMsgAdded = true;
+            } else {
+              newMsgs[newMsgs.length - 1] = { 
+                ...tempAiMsg, 
+                content: fullContent,
+                mode,
+                files: [] 
+              };
+            }
+            return newMsgs;
+          });
+        },
+        (data) => {
+          setRelFiles(data.relevant_files || []);
+        },
+        (error) => {
+          setMessages(prev => [
+            ...prev,
+            { role: 'ai', content: `Error: ${error}`, mode: 'error' }
+          ]);
+        }
+      );
     } catch (e) {
       setMessages(prev => [
         ...prev,
