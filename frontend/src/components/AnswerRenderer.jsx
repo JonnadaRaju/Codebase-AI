@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 export function AnswerRenderer({ content }) {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
-  if (!content || typeof content !== 'string') {
-    return <p className="text-gray-400 text-sm">No response received.</p>;
+  if (!content || !content.trim()) {
+    return null;
   }
 
   const copyToClipboard = async (text, index) => {
