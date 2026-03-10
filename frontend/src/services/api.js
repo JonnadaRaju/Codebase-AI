@@ -151,6 +151,78 @@ export const api = {
     return data;
   },
 
+  async queryStream({ projectId, mode, question, errorMessage, numQuestions }, onChunk, onDone, onError) {
+    const body = {
+      project_id: projectId,
+      mode,
+      question,
+    };
+    
+    if (mode === 'debug' && errorMessage) {
+      body.error_message = errorMessage;
+    }
+    if (mode === 'interview') {
+      body.num_questions = numQuestions || 5;
+    }
+    
+    try {
+      const res = await fetch(`${API_BASE}/query/stream`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...getHeaders(),
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (res.status === 401) {
+        handleUnauth(401);
+        onError('Unauthorized');
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json();
+        onError(data.detail || 'Query failed');
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value);
+        const lines = text.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) {
+                onError(data.error);
+                return;
+              }
+              if (data.done) {
+                onDone(data);
+                return;
+              }
+              if (data.content) {
+                onChunk(data.content);
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } catch (err) {
+      onError(err.message || 'Stream failed');
+    }
+  },
+
   async deleteProject(projectId) {
     const res = await fetch(`${API_BASE}/projects/${projectId}`, {
       method: 'DELETE',
