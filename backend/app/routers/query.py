@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Literal, Optional, List
 from app.services.retriever import retrieve_context, format_context_for_llm, get_relevant_filenames
@@ -7,6 +8,7 @@ from app.modes.prompts import (
     EXPLAIN_PROMPT, INTERVIEW_PROMPT, REVIEW_PROMPT,
     DEBUG_PROMPT, ARCHITECTURE_PROMPT
 )
+import json
 
 router = APIRouter()
 
@@ -71,7 +73,7 @@ async def query_project(request: QueryRequest):
         user_query = f"source code files routes models database schemas functions classes {request.question}"
 
     try:
-        chunks = retrieve_context(request.project_id, user_query, top_k=10)
+        chunks = retrieve_context(request.project_id, user_query, top_k=25)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Project not found: {str(e)}")
 
@@ -103,3 +105,70 @@ async def query_project(request: QueryRequest):
         relevant_files=relevant_files,
         tokens_used=result["tokens_used"]
     )
+
+
+async def generate_stream(request: QueryRequest):
+    if request.mode == "interview":
+        system_prompt = get_system_prompt(request.mode, request.num_questions or 5)
+        context = "You are generating general interview questions applicable to any software project."
+        user_query = request.question or "Generate interview questions"
+        
+        result = generate_response(system_prompt, context, user_query, stream=True)
+        
+        for chunk in result:
+            yield f"data: {json.dumps({'content': chunk})}\n\n"
+        
+        yield f"data: {json.dumps({'done': True, 'relevant_files': [], 'mode': request.mode})}\n\n"
+        return
+
+    user_query = request.question
+    if request.mode == "debug" and request.error_message:
+        user_query = f"Error/Issue: {request.error_message}\n\nContext: {request.question}"
+
+    if request.mode == "architecture":
+        user_query = f"source code files routes models database schemas functions classes {request.question}"
+
+    try:
+        chunks = retrieve_context(request.project_id, user_query, top_k=25)
+    except Exception as e:
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        return
+
+    if request.mode == "architecture":
+        code_chunks = [c for c in chunks if not any(
+            c["filename"].lower().endswith(ext)
+            for ext in ['.md', '.txt', '.rst', 'readme', 'specification']
+        )]
+        if code_chunks:
+            chunks = code_chunks
+
+    if not chunks:
+        yield f"data: {json.dumps({'error': 'No relevant code found'})}\n\n"
+        return
+
+    context = format_context_for_llm(chunks)
+    relevant_files = get_relevant_filenames(chunks)
+    system_prompt = get_system_prompt(request.mode, request.num_questions or 5)
+    
+    print(f"DEBUG: Retrieved {len(chunks)} chunks, {len(relevant_files)} files")
+    print(f"DEBUG: Context length = {len(context)} chars")
+
+    try:
+        result = generate_response(system_prompt, context, user_query, stream=True)
+        
+        chunk_count = 0
+        for chunk in result:
+            chunk_count += 1
+            yield f"data: {json.dumps({'content': chunk})}\n\n"
+        
+        print(f"DEBUG: Streamed {chunk_count} chunks")
+        
+        yield f"data: {json.dumps({'done': True, 'relevant_files': relevant_files, 'mode': request.mode})}\n\n"
+    except Exception as e:
+        print(f"DEBUG: Stream error: {e}")
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
+@router.post("/query/stream")
+async def query_project_stream(request: QueryRequest):
+    return StreamingResponse(generate_stream(request), media_type="text/event-stream")
