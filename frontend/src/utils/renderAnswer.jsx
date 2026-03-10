@@ -1,7 +1,7 @@
 import React from 'react';
 
 export function renderAnswer(raw) {
-  if (!raw || typeof raw !== 'string') return <p className="text-ink2 text-sm">No response received.</p>;
+  if (!raw || !raw.trim()) return null;
   
   try {
     const lines = raw.split('\n');
