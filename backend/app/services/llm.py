@@ -144,9 +144,13 @@ def generate_response(system_prompt: str, context: str, user_query: str, stream:
         LLM_PROVIDER=ollama      → local, free, offline
         LLM_PROVIDER=openrouter  → cloud, free tier, production
     """
-    user_message = f"""You are analyzing REAL source code. Only use information from the code below.
-Do NOT invent file names, functions, or logic that are not shown.
-If something is not in the code, say "I could not find this in the retrieved code."
+    user_message = f"""CRITICAL INSTRUCTIONS - FOLLOW EXACTLY:
+1. Only use information EXPLICITLY visible in the "RETRIEVED SOURCE CODE" section
+2. If a function name, method name, or variable is NOT in the code, you MUST write: "[NOT FOUND IN CODE]"
+3. NEVER invent, guess, or infer function names that are not shown
+4. When describing code flow, only mention functions/variables that appear EXACTLY as written
+5. Bad answer: "The startTracing() method calls switchToInputScreen()" (you invented these!)
+6. Correct answer: "I could not find startTracing() in the retrieved code"
 
 === RETRIEVED SOURCE CODE ===
 {context}
@@ -154,8 +158,7 @@ If something is not in the code, say "I could not find this in the retrieved cod
 
 Question: {user_query}
 
-Answer based strictly on the actual code above.
-Always mention exact filenames and function names you see in the code."""
+Answer:"""
 
     provider = settings.LLM_PROVIDER.lower()
     print(f"🔀 Provider: {provider} | Model: {settings.OLLAMA_MODEL if provider == 'ollama' else 'openrouter'}")
