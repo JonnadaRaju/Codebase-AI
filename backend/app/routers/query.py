@@ -43,12 +43,37 @@ def get_system_prompt(mode: str, num_questions: int = 5) -> str:
 async def query_project(request: QueryRequest):
     print(f"DEBUG: mode={request.mode}, question={request.question[:50] if request.question else 'None'}")
     
-    # Interview mode doesn't need code context - generate general questions
+    # Interview mode needs broad retrieval query
     if request.mode == "interview":
-        print("DEBUG: Entering interview mode - skipping code retrieval")
+        print("DEBUG: Entering interview mode - retrieving code")
+        
+        # Use a better query to find actual code chunks
+        retrieval_query = (
+            "function class method implementation "
+            "logic code structure algorithm"
+        )
+        
+        try:
+            chunks = retrieve_context(request.project_id, retrieval_query, top_k=15)
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Project not found: {str(e)}")
+        
+        # Format with filenames
+        context = ""
+        for chunk in chunks:
+            filename = chunk.get('filename', 'unknown')
+            context += f"\n=== FILE: {filename} ===\n"
+            context += chunk.get('text', '')
+            context += "\n"
+        
+        relevant_files = list(set([
+            chunk.get('filename', '')
+            for chunk in chunks
+            if chunk.get('filename')
+        ]))
+        
         system_prompt = get_system_prompt(request.mode, request.num_questions or 5)
-        context = "You are generating general interview questions applicable to any software project. Focus on the 14 categories: Project Overview, Architecture, Technology Choices, Database, API Design, Security, Code Quality, Error Handling, Testing, Performance, Feature-Specific, Problem Solving, Improvements, and Collaboration."
-        user_query = request.question or "Generate interview questions and answers for this project"
+        user_query = request.question or "Generate interview questions and answers based on this code"
         
         try:
             result = generate_response(system_prompt, context, user_query)
@@ -58,7 +83,7 @@ async def query_project(request: QueryRequest):
         return QueryResponse(
             answer=result["answer"],
             mode=request.mode,
-            relevant_files=[],
+            relevant_files=relevant_files,
             tokens_used=result["tokens_used"]
         )
 
@@ -108,17 +133,45 @@ async def query_project(request: QueryRequest):
 
 
 async def generate_stream(request: QueryRequest):
+    # Interview mode needs broad retrieval query
     if request.mode == "interview":
+        print("DEBUG: Interview mode - retrieving code")
+        
+        # Use a better query to find actual code chunks
+        retrieval_query = (
+            "function class method implementation "
+            "logic code structure algorithm"
+        )
+        
+        try:
+            chunks = retrieve_context(request.project_id, retrieval_query, top_k=15)
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            return
+        
+        # Format with filenames
+        context = ""
+        for chunk in chunks:
+            filename = chunk.get('filename', 'unknown')
+            context += f"\n=== FILE: {filename} ===\n"
+            context += chunk.get('text', '')
+            context += "\n"
+        
+        relevant_files = list(set([
+            chunk.get('filename', '')
+            for chunk in chunks
+            if chunk.get('filename')
+        ]))
+        
         system_prompt = get_system_prompt(request.mode, request.num_questions or 5)
-        context = "You are generating general interview questions applicable to any software project."
-        user_query = request.question or "Generate interview questions"
+        user_query = request.question or "Generate interview questions and answers based on this code"
         
         result = generate_response(system_prompt, context, user_query, stream=True)
         
         for chunk in result:
             yield f"data: {json.dumps({'content': chunk})}\n\n"
         
-        yield f"data: {json.dumps({'done': True, 'relevant_files': [], 'mode': request.mode})}\n\n"
+        yield f"data: {json.dumps({'done': True, 'relevant_files': relevant_files, 'mode': request.mode})}\n\n"
         return
 
     user_query = request.question
