@@ -50,42 +50,90 @@ export function AnswerRenderer({ content }) {
       }
     };
 
-    const isInterviewFormat = (raw) => /Q\[\d+\]:/i.test(raw) && !/A\[\d+\]:/i.test(raw);
+    const isInterviewFormat = (raw) => /Q\[\d+\]:/i.test(raw) && /A\[\d+\]:/i.test(raw);
 
     const parseInterview = (raw) => {
-      const questions = [];
-      const blocks = raw.split('>>>').filter(b => b.trim());
+      const pairs = [];
+
+      // Split by [NEXT] separator
+      const blocks = raw
+        .split('[NEXT]')
+        .map(b => b.trim())
+        .filter(b => b.length > 0);
 
       blocks.forEach(block => {
-        const lines = block.trim().split('\n').filter(l => l.trim());
-        let qText = '';
+        // Find Q line
+        const qMatch = block.match(/Q\[\d+\]:\s*(.+?)(?=\nA\[\d+\]:)/s);
+        // Find A line
+        const aMatch = block.match(/A\[\d+\]:\s*(.+?)$/s);
+
+        if (qMatch && aMatch) {
+          pairs.push({
+            q: `Q[${pairs.length + 1}]: ${qMatch[1].trim()}`,
+            a: `A[${pairs.length + 1}]: ${aMatch[1].trim()}`
+          });
+        }
+      });
+
+      // Fallback: if [NEXT] parsing fails, try line by line parsing
+      if (pairs.length === 0) {
+        const lines = raw.split('\n');
+        let currentQ = null;
+        let currentA = null;
 
         lines.forEach(line => {
           const trimmed = line.trim();
           if (/^Q\[\d+\]:/.test(trimmed)) {
-            qText = trimmed;
-          } else if (qText && trimmed) {
-            qText += ' ' + trimmed;
+            if (currentQ && currentA) {
+              pairs.push({ q: currentQ, a: currentA });
+            }
+            currentQ = trimmed;
+            currentA = null;
+          } else if (/^A\[\d+\]:/.test(trimmed)) {
+            currentA = trimmed;
+          } else if (currentA && trimmed) {
+            currentA += ' ' + trimmed;
+          } else if (currentQ && !currentA && trimmed) {
+            currentQ += ' ' + trimmed;
           }
         });
 
-        if (qText) {
-          questions.push(qText);
+        // Push last pair
+        if (currentQ && currentA) {
+          pairs.push({ q: currentQ, a: currentA });
         }
-      });
+      }
 
-      return questions;
+      return pairs;
     };
 
     const renderInterview = (raw) => {
-      const questions = parseInterview(raw);
+      const pairs = parseInterview(raw);
+      const fmt = formatText;
+
+      if (pairs.length === 0) {
+        // Fallback plain text render
+        return (
+          <pre className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {raw}
+          </pre>
+        );
+      }
+
       return (
         <div className="space-y-3">
-          {questions.map((q, i) => (
-            <div key={i} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
-              <p className="text-sm font-semibold text-gray-900 leading-relaxed">
-                {formatText(q)}
+          {pairs.map((pair, i) => (
+            <div key={i} className="border border-gray-100 rounded-xl p-4 bg-white hover:bg-gray-50 transition-all">
+              {/* Question */}
+              <p className="text-sm font-semibold text-gray-900 leading-relaxed mb-3">
+                {fmt(pair.q)}
               </p>
+              {/* Answer */}
+              <div className="pl-3 border-l-2 border-green-300">
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {fmt(pair.a)}
+                </p>
+              </div>
             </div>
           ))}
         </div>
