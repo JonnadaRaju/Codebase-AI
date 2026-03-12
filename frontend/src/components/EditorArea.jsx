@@ -57,31 +57,32 @@ export function EditorArea({
         ) : (
           <div className="space-y-4">
             {messages.map((msg, idx) => (
-              <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
-                  msg.role === 'user' ? 'bg-vs-blue' : 'bg-vs-purple'
-                }`}>
-                  {msg.role === 'user' ? '👤' : '🤖'}
-                </div>
-                <div className={`flex-1 max-w-[80%] ${msg.role === 'user' ? 'text-right' : ''}`}>
-                  {msg.role === 'ai' && msg.mode && (
-                    <div className={`text-xs font-medium mb-1 ${modeColors[msg.mode] || ''}`}>
-                      {MODES.find(m => m.id === msg.mode)?.label} Mode
+              <div key={msg.id || idx}>
+                
+                {/* USER MESSAGE */}
+                {msg.role === 'user' && (
+                  <div className="flex justify-end gap-3 items-end mb-4">
+                    <div className="max-w-lg bg-gray-900 text-white px-4 py-3 rounded-2xl rounded-br-sm text-sm leading-relaxed shadow-sm">
+                      {msg.content}
                     </div>
-                  )}
-                  <div className={`rounded-lg p-3 ${
-                    msg.role === 'user' 
-                      ? 'bg-vs-blue text-white' 
-                      : 'bg-vs-input text-ink'
-                  }`}>
-                    <pre className="whitespace-pre-wrap text-sm font-mono">{msg.content}</pre>
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-sm font-semibold bg-purple-500 text-white">
+                      U
+                    </div>
                   </div>
-                  {msg.role === 'ai' && msg.files && (
-                    <div className="mt-2 text-xs text-ink3">
-                      Referenced: {msg.files.join(', ')}
+                )}
+
+                {/* AI MESSAGE */}
+                {msg.role === 'ai' && msg.content && (
+                  <div className="flex gap-3 items-start mb-4">
+                    <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-sm flex-shrink-0">
+                      🤖
                     </div>
-                  )}
-                </div>
+                    <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                      <pre className="whitespace-pre-wrap text-sm font-mono">{msg.content}</pre>
+                    </div>
+                  </div>
+                )}
+
               </div>
             ))}
             {loading && (
