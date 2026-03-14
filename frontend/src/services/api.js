@@ -1,5 +1,4 @@
-const API_BASE = '/api';
-
+const API_BASE = 'https://codebase-ai-backend.onrender.com/api';
 const getToken = () => localStorage.getItem('codebase_ai_token');
 
 const getHeaders = () => {
