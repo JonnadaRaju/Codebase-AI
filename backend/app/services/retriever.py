@@ -1,5 +1,5 @@
 from typing import List, Dict
-from app.services.embedder import embedding_model, get_collection
+from app.services.embedder import get_embedding_model, get_collection
 from app.config import settings
 
 
@@ -8,7 +8,7 @@ def retrieve_context(project_id: str, query: str, top_k: int = None) -> List[Dic
         top_k = settings.TOP_K_RETRIEVAL
 
     collection = get_collection(project_id)
-    query_embedding = embedding_model.encode([query]).tolist()
+    query_embedding = get_embedding_model().encode([query]).tolist()
 
     results = collection.query(
         query_embeddings=query_embedding,
