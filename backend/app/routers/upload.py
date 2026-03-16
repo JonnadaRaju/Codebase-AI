@@ -4,6 +4,7 @@ import os
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.db.database import get_db, Project
+from app.routers.auth import get_current_user
 from app.services.file_processor import extract_files_from_zip, extract_files_from_github
 from app.services.chunker import chunk_all_files
 from app.services.embedder import store_chunks
@@ -25,7 +26,8 @@ def clean_github_url(url: str) -> str:
 async def upload_zip(
     file: UploadFile = File(...),
     project_name: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
 ):
     if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail="Only ZIP files are supported.")
@@ -37,9 +39,16 @@ async def upload_zip(
         tmp.write(await file.read())
         tmp_path = tmp.name
 
+    project = None
     try:
         # Create project record
-        project = Project(id=project_id, name=project_name, source="zip", status="processing")
+        project = Project(
+            id=project_id,
+            user_id=current_user.id,
+            name=project_name,
+            source="zip",
+            status="processing",
+        )
         db.add(project)
         db.commit()
 
@@ -58,8 +67,9 @@ async def upload_zip(
         db.commit()
 
     except Exception as e:
-        project.status = "failed"
-        db.commit()
+        if project is not None:
+            project.status = "failed"
+            db.commit()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         os.unlink(tmp_path)
@@ -77,7 +87,8 @@ async def upload_zip(
 async def upload_github(
     github_url: str = Form(...),
     project_name: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
 ):
     if "github.com" not in github_url:
         raise HTTPException(status_code=400, detail="Please provide a valid GitHub URL.")
@@ -89,8 +100,15 @@ async def upload_github(
 
     project_id = str(uuid.uuid4())
 
+    project = None
     try:
-        project = Project(id=project_id, name=project_name, source="github", status="processing")
+        project = Project(
+            id=project_id,
+            user_id=current_user.id,
+            name=project_name,
+            source="github",
+            status="processing",
+        )
         db.add(project)
         db.commit()
 
@@ -107,12 +125,14 @@ async def upload_github(
         db.commit()
 
     except HTTPException:
-        project.status = "failed"
-        db.commit()
+        if project is not None:
+            project.status = "failed"
+            db.commit()
         raise
     except Exception as e:
-        project.status = "failed"
-        db.commit()
+        if project is not None:
+            project.status = "failed"
+            db.commit()
         error_msg = str(e).lower()
         if 'not found' in error_msg or 'could not find' in error_msg:
             raise HTTPException(status_code=404, detail="Repository not found. Check if it is public.")
