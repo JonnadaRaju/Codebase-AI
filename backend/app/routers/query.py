@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Literal, Optional, List
+from sqlalchemy.orm import Session
+from app.db.database import get_db, Project
+from app.routers.auth import get_current_user
 from app.services.retriever import retrieve_context, format_context_for_llm, get_relevant_filenames
 from app.services.llm import generate_response
 from app.modes.prompts import (
@@ -11,6 +14,17 @@ from app.modes.prompts import (
 import json
 
 router = APIRouter()
+
+
+def ensure_project_access(project_id: str, db: Session, current_user):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return project
 
 
 class QueryRequest(BaseModel):
@@ -40,7 +54,12 @@ def get_system_prompt(mode: str, num_questions: int = 5) -> str:
 
 
 @router.post("/query", response_model=QueryResponse)
-async def query_project(request: QueryRequest):
+async def query_project(
+    request: QueryRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    ensure_project_access(request.project_id, db, current_user)
     print(f"DEBUG: mode={request.mode}, question={request.question[:50] if request.question else 'None'}")
     
     # Interview mode needs broad retrieval query
@@ -223,5 +242,10 @@ async def generate_stream(request: QueryRequest):
 
 
 @router.post("/query/stream")
-async def query_project_stream(request: QueryRequest):
+async def query_project_stream(
+    request: QueryRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
+    ensure_project_access(request.project_id, db, current_user)
     return StreamingResponse(generate_stream(request), media_type="text/event-stream")
