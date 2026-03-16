@@ -5,9 +5,16 @@ from app.config import settings
 import os
 
 _embedding_model = None
+_chroma_client = None
 
 os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
-chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
+
+
+def get_chroma_client():
+    global _chroma_client
+    if _chroma_client is None:
+        _chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
+    return _chroma_client
 
 
 def get_embedding_model():
@@ -18,7 +25,7 @@ def get_embedding_model():
 
 
 def get_collection(project_id: str):
-    return chroma_client.get_or_create_collection(
+    return get_chroma_client().get_or_create_collection(
         name=f"project_{project_id}",
         metadata={"hnsw:space": "cosine"}
     )
@@ -64,6 +71,6 @@ def store_chunks(project_id: str, chunks: List[Dict]) -> int:
 def delete_project_vectors(project_id: str):
 
     try:
-        chroma_client.delete_collection(f"project_{project_id}")
+        get_chroma_client().delete_collection(f"project_{project_id}")
     except Exception:
         pass
