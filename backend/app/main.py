@@ -22,8 +22,10 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
+    print("Starting Codebase AI startup...")
     settings.validate_runtime()
     init_db()
+    print("Startup complete.")
 
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
