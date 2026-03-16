@@ -1,14 +1,20 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.db.database import get_db, Project
+from app.routers.auth import get_current_user
 from app.services.embedder import delete_project_vectors
 
 router = APIRouter()
 
 
 @router.get("/projects")
-def list_projects(db: Session = Depends(get_db)):
-    projects = db.query(Project).order_by(Project.created_at.desc()).all()
+def list_projects(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    projects = (
+        db.query(Project)
+        .filter(Project.user_id == current_user.id)
+        .order_by(Project.created_at.desc())
+        .all()
+    )
     return [
         {
             "project_id": p.id,
@@ -24,8 +30,12 @@ def list_projects(db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{project_id}")
-def get_project(project_id: str, db: Session = Depends(get_db)):
-    project = db.query(Project).filter(Project.id == project_id).first()
+def get_project(project_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
     return {
@@ -40,8 +50,12 @@ def get_project(project_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/projects/{project_id}/files")
-def get_project_files(project_id: str, db: Session = Depends(get_db)):
-    project = db.query(Project).filter(Project.id == project_id).first()
+def get_project_files(project_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
@@ -66,8 +80,12 @@ def get_project_files(project_id: str, db: Session = Depends(get_db)):
 
 
 @router.delete("/projects/{project_id}")
-def delete_project(project_id: str, db: Session = Depends(get_db)):
-    project = db.query(Project).filter(Project.id == project_id).first()
+def delete_project(project_id: str, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    project = (
+        db.query(Project)
+        .filter(Project.id == project_id, Project.user_id == current_user.id)
+        .first()
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found.")
 
