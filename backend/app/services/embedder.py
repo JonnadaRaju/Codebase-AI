@@ -4,10 +4,17 @@ from typing import List, Dict
 from app.config import settings
 import os
 
-embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
+_embedding_model = None
 
 os.makedirs(settings.CHROMA_PERSIST_DIR, exist_ok=True)
 chroma_client = chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)
+
+
+def get_embedding_model():
+    global _embedding_model
+    if _embedding_model is None:
+        _embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
+    return _embedding_model
 
 
 def get_collection(project_id: str):
@@ -42,7 +49,7 @@ def store_chunks(project_id: str, chunks: List[Dict]) -> int:
         batch_meta = metadatas[i:i + batch_size]
         batch_ids = ids[i:i + batch_size]
 
-        embeddings = embedding_model.encode(batch_texts, show_progress_bar=False).tolist()
+        embeddings = get_embedding_model().encode(batch_texts, show_progress_bar=False).tolist()
 
         collection.add(
             documents=batch_texts,
