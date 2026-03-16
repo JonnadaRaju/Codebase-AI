@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, DateTime, Integer, Text
+from sqlalchemy import create_engine, Column, String, DateTime, Integer, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
@@ -24,6 +24,7 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, nullable=False, index=True)
     name = Column(String, nullable=False)
     source = Column(String, nullable=False)       
     total_files = Column(Integer, default=0)
@@ -34,6 +35,12 @@ class Project(Base):
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    inspector = inspect(engine)
+    if "projects" in inspector.get_table_names():
+        columns = {column["name"] for column in inspector.get_columns("projects")}
+        if "user_id" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE projects ADD COLUMN user_id VARCHAR"))
 
 
 def get_db():
